@@ -14,7 +14,6 @@ namespace Mautic\LeadBundle\Tests\Controller\Api;
 use Mautic\CoreBundle\Test\MauticMysqlTestCase;
 use Mautic\LeadBundle\Entity\DoNotContact;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\Response;
 
 class LeadApiControllerFunctionalTest extends MauticMysqlTestCase
 {
@@ -198,7 +197,7 @@ class LeadApiControllerFunctionalTest extends MauticMysqlTestCase
         $clientResponse = $this->client->getResponse();
         $response       = json_decode($clientResponse->getContent(), true);
 
-        $this->assertFalse(isset($response['contacts'][0]['doNotContact'][0]));
+        $this->assertEmpty($response['contacts'][0]['doNotContact']);
 
         // Remove contact
         $this->client->request('DELETE', "/api/contacts/$contactId/delete");

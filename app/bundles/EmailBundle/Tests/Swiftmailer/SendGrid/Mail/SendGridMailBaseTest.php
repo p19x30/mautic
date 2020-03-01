@@ -16,7 +16,7 @@ use Mautic\EmailBundle\Swiftmailer\SendGrid\Mail\SendGridMailBase;
 use SendGrid\Content;
 use SendGrid\Email;
 
-class SendGridMailBaseTest extends \PHPUnit_Framework_TestCase
+class SendGridMailBaseTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @dataProvider contentTypeProvider
@@ -30,6 +30,7 @@ class SendGridMailBaseTest extends \PHPUnit_Framework_TestCase
         $sendGridMailBase = new SendGridMailBase($plainTextMessageHelper);
 
         $message = $this->getMockBuilder(\Swift_Mime_SimpleMessage::class)
+            ->disableOriginalConstructor()
             ->getMock();
 
         $message->expects($this->once())
@@ -93,6 +94,7 @@ class SendGridMailBaseTest extends \PHPUnit_Framework_TestCase
         $sendGridMailBase = new SendGridMailBase($plainTextMessageHelper);
 
         $message = $this->getMockBuilder(\Swift_Mime_SimpleMessage::class)
+            ->disableOriginalConstructor()
             ->getMock();
 
         $message->expects($this->once())
@@ -144,6 +146,7 @@ class SendGridMailBaseTest extends \PHPUnit_Framework_TestCase
         $sendGridMailBase = new SendGridMailBase($plainTextMessageHelper);
 
         $message = $this->getMockBuilder(\Swift_Mime_SimpleMessage::class)
+            ->disableOriginalConstructor()
             ->getMock();
 
         $message->expects($this->once())

@@ -29,8 +29,6 @@ class SendGridMailBase
     }
 
     /**
-     * @param \Swift_Mime_SimpleMessage $message
-     *
      * @return Mail
      */
     public function getSendGridMail(\Swift_Mime_SimpleMessage $message)
@@ -43,7 +41,7 @@ class SendGridMailBase
         $contentSecond = null;
 
         // Plain text message must be first if present
-        if ($contentMain->getType() !== 'text/plain') {
+        if ('text/plain' !== $contentMain->getType()) {
             $plainText = $this->plainTextMessageHelper->getPlainTextFromMessageNotStatic($message);
             if ($plainText) {
                 $contentSecond = $contentMain;
@@ -65,12 +63,10 @@ class SendGridMailBase
     }
 
     /**
-     * @param \Swift_Mime_SimpleMessage $message
-     *
      * @return string
      */
     private function getContentType(\Swift_Mime_SimpleMessage $message)
     {
-        return $message->getContentType() === 'text/plain' ? $message->getContentType() : 'text/html';
+        return 'text/plain' === $message->getContentType() ? $message->getContentType() : 'text/html';
     }
 }

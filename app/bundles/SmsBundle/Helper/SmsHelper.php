@@ -53,16 +53,6 @@ class SmsHelper
      */
     private $doNotContact;
 
-    /**
-     * SmsHelper constructor.
-     *
-     * @param EntityManager     $em
-     * @param LeadModel         $leadModel
-     * @param PhoneNumberHelper $phoneNumberHelper
-     * @param SmsModel          $smsModel
-     * @param IntegrationHelper $integrationHelper
-     * @param DoNotContact      $doNotContact
-     */
     public function __construct(
         EntityManager $em,
         LeadModel $leadModel,

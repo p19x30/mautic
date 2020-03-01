@@ -13,18 +13,21 @@ namespace Mautic\WebhookBundle\Model;
 
 use Doctrine\Common\Collections\Criteria;
 use JMS\Serializer\SerializationContext;
-use JMS\Serializer\Serializer;
+use JMS\Serializer\SerializerInterface;
 use Joomla\Http\Http;
 use Mautic\ApiBundle\Serializer\Exclusion\PublishDetailsExclusionStrategy;
 use Mautic\CoreBundle\Helper\CoreParametersHelper;
+use Mautic\CoreBundle\Helper\EncryptionHelper;
 use Mautic\CoreBundle\Model\FormModel;
 use Mautic\CoreBundle\Model\NotificationModel;
+use Mautic\WebhookBundle\Entity\Event;
 use Mautic\WebhookBundle\Entity\EventRepository;
 use Mautic\WebhookBundle\Entity\Log;
 use Mautic\WebhookBundle\Entity\LogRepository;
 use Mautic\WebhookBundle\Entity\Webhook;
 use Mautic\WebhookBundle\Entity\WebhookQueue;
 use Mautic\WebhookBundle\Entity\WebhookQueueRepository;
+use Mautic\WebhookBundle\Entity\WebhookRepository;
 use Mautic\WebhookBundle\Event as Events;
 use Mautic\WebhookBundle\Event\WebhookEvent;
 use Mautic\WebhookBundle\Form\Type\WebhookType;
@@ -32,9 +35,6 @@ use Mautic\WebhookBundle\WebhookEvents;
 use Symfony\Component\EventDispatcher\Event as SymfonyEvent;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 
-/**
- * Class ReportModel.
- */
 class WebhookModel extends FormModel
 {
     /**
@@ -86,7 +86,7 @@ class WebhookModel extends FormModel
     protected $logMax;
 
     /**
-     * @var Serializer
+     * @var SerializerInterface
      */
     protected $serializer;
 
@@ -103,16 +103,9 @@ class WebhookModel extends FormModel
      */
     protected $eventsOrderByDir;
 
-    /**
-     * WebhookModel constructor.
-     *
-     * @param CoreParametersHelper $coreParametersHelper
-     * @param Serializer           $serializer
-     * @param NotificationModel    $notificationModel
-     */
     public function __construct(
         CoreParametersHelper $coreParametersHelper,
-        Serializer $serializer,
+        SerializerInterface $serializer,
         NotificationModel $notificationModel
     ) {
         $this->setConfigProps($coreParametersHelper);
@@ -121,12 +114,21 @@ class WebhookModel extends FormModel
     }
 
     /**
-     * {@inheritdoc}
-     *
-     * @param       $entity
-     * @param       $formFactory
-     * @param null  $action
-     * @param array $options
+     * @param Webhook $entity
+     */
+    public function saveEntity($entity, $unlock = true)
+    {
+        if (null === $entity->getSecret()) {
+            $entity->setSecret(EncryptionHelper::generateKey());
+        }
+
+        parent::saveEntity($entity, $unlock);
+    }
+
+    /**
+     * @param Webhook $entity
+     * @param         $formFactory
+     * @param null    $action
      *
      * @return mixed
      *
@@ -148,11 +150,11 @@ class WebhookModel extends FormModel
     }
 
     /**
-     * {@inheritdoc}
+     * @return Webhook|null
      */
     public function getEntity($id = null)
     {
-        if ($id === null) {
+        if (null === $id) {
             return new Webhook();
         }
 
@@ -160,13 +162,11 @@ class WebhookModel extends FormModel
     }
 
     /**
-     * {@inheritdoc}
-     *
-     * @return \Mautic\WebhookBundle\Entity\WebhookRepository
+     * @return WebhookRepository
      */
     public function getRepository()
     {
-        return $this->em->getRepository('MauticWebhookBundle:Webhook');
+        return $this->em->getRepository(Webhook::class);
     }
 
     /**
@@ -198,9 +198,7 @@ class WebhookModel extends FormModel
      */
     public function getEventWebooksByType($type)
     {
-        $results = $this->getEventRepository()->getEntitiesByEventType($type);
-
-        return $results;
+        return $this->getEventRepository()->getEntitiesByEventType($type);
     }
 
     /**
@@ -218,9 +216,8 @@ class WebhookModel extends FormModel
     }
 
     /**
-     * @param       $webhookEvents
-     * @param       $payload
-     * @param array $serializationGroups
+     * @param $webhookEvents
+     * @param $payload
      */
     public function queueWebhooks($webhookEvents, $payload, array $serializationGroups = [])
     {
@@ -246,10 +243,8 @@ class WebhookModel extends FormModel
     /**
      * Creates a WebhookQueue entity, sets the date and returns the created entity.
      *
-     * @param Webhook $webhook
-     * @param         $event
-     * @param         $payload
-     * @param array   $serializationGroups
+     * @param $event
+     * @param $payload
      *
      * @return WebhookQueue
      */
@@ -285,7 +280,6 @@ class WebhookModel extends FormModel
     }
 
     /**
-     * @param Webhook      $webhook
      * @param WebhookQueue $queue
      *
      * @return bool
@@ -307,15 +301,22 @@ class WebhookModel extends FormModel
             $payload = json_encode($payload);
         }
 
+        // generate a base64 encoded HMAC-SHA256 signature of the payload
+        $secret    = $webhook->getSecret();
+        $signature = base64_encode(hash_hmac('sha256', $payload, $secret, true));
+
         // Set up custom headers
-        $headers = ['Content-Type' => 'application/json'];
+        $headers = [
+            'Content-Type'      => 'application/json',
+            'Webhook-Signature' => $signature,
+        ];
         $start   = microtime(true);
 
         try {
             $response = $http->post($webhook->getWebhookUrl(), $payload, $headers, $this->webhookTimeout);
 
             // remove successfully processed queues from the Webhook object so they won't get stored again
-            foreach ($this->webhookQueueIdList as $id => $queue) {
+            foreach ($this->webhookQueueIdList as $queue) {
                 $webhook->removeQueue($queue);
             }
 
@@ -324,7 +325,7 @@ class WebhookModel extends FormModel
             // throw an error exception if we don't get a 200 back
             if ($response->code >= 300 || $response->code < 200) {
                 // The reciever of the webhook is telling us to stop bothering him with our requests by code 410
-                if ($response->code == 410) {
+                if (410 == $response->code) {
                     $this->killWebhook($webhook, 'mautic.webhook.stopped.reason.410');
                 }
 
@@ -374,8 +375,6 @@ class WebhookModel extends FormModel
      * Look into the history and check if all the responses we care about had failed.
      * But let it run for a while after the user modified it. Lets not aggravate the user.
      *
-     * @param Webhook $webhook
-     *
      * @return bool
      */
     public function isSick(Webhook $webhook)
@@ -388,7 +387,7 @@ class WebhookModel extends FormModel
         $successRadio = $this->getLogRepository()->getSuccessVsErrorStatusCodeRatio($webhook->getId(), $this->disableLimit);
 
         // If there are no log rows yet, consider it healthy
-        if ($successRadio === null) {
+        if (null === $successRadio) {
             return false;
         }
 
@@ -398,8 +397,6 @@ class WebhookModel extends FormModel
     /**
      * Unpublish the webhook so it will stop emit the requests
      * and notify user about it.
-     *
-     * @param Webhook $webhook
      */
     public function killWebhook(Webhook $webhook, $reason = 'mautic.webhook.stopped.reason')
     {
@@ -429,10 +426,9 @@ class WebhookModel extends FormModel
     /**
      * Add a log for the webhook response HTTP status and save it.
      *
-     * @param Webhook $webhook
-     * @param int     $statusCode
-     * @param float   $runtime    in seconds
-     * @param string  $note
+     * @param int    $statusCode
+     * @param float  $runtime    in seconds
+     * @param string $note
      */
     public function addLog(Webhook $webhook, $statusCode, $runtime, $note = null)
     {
@@ -455,13 +451,11 @@ class WebhookModel extends FormModel
     }
 
     /**
-     * Get Qeueue Repository.
-     *
      * @return WebhookQueueRepository
      */
     public function getQueueRepository()
     {
-        return $this->em->getRepository('MauticWebhookBundle:WebhookQueue');
+        return $this->em->getRepository(WebhookQueue::class);
     }
 
     /**
@@ -469,7 +463,7 @@ class WebhookModel extends FormModel
      */
     public function getEventRepository()
     {
-        return $this->em->getRepository('MauticWebhookBundle:Event');
+        return $this->em->getRepository(Event::class);
     }
 
     /**
@@ -477,13 +471,12 @@ class WebhookModel extends FormModel
      */
     public function getLogRepository()
     {
-        return $this->em->getRepository('MauticWebhookBundle:Log');
+        return $this->em->getRepository(Log::class);
     }
 
     /**
      * Get the payload from the webhook.
      *
-     * @param Webhook      $webhook
      * @param WebhookQueue $queue
      *
      * @return array
@@ -496,7 +489,7 @@ class WebhookModel extends FormModel
 
         $payload = [];
 
-        if ($this->queueMode === self::COMMAND_PROCESS) {
+        if (self::COMMAND_PROCESS === $this->queueMode) {
             $queuesArray = $this->getWebhookQueues($webhook);
         } else {
             $queuesArray = [isset($queue) ? [$queue] : []];
@@ -537,13 +530,11 @@ class WebhookModel extends FormModel
     /**
      * Get the queues and order by date so we get events.
      *
-     * @param Webhook $webhook
-     *
      * @return \Doctrine\ORM\Tools\Pagination\Paginator
      */
     public function getWebhookQueues(Webhook $webhook)
     {
-        /** @var \Mautic\WebhookBundle\Entity\WebhookQueueRepository $queueRepo */
+        /** @var WebhookQueueRepository $queueRepo */
         $queueRepo = $this->getQueueRepository();
 
         return $queueRepo->getEntities(
@@ -568,8 +559,6 @@ class WebhookModel extends FormModel
 
     /**
      * Returns either Webhook's orderbyDir or the value from configuration as default.
-     *
-     * @param Webhook|null $webhook
      *
      * @return string
      */
@@ -633,7 +622,6 @@ class WebhookModel extends FormModel
     /**
      * @param       $payload
      * @param array $groups
-     * @param array $customExclusionStrategies
      *
      * @return mixed|string
      */
@@ -670,16 +658,14 @@ class WebhookModel extends FormModel
 
     /**
      * Sets all class properties from CoreParametersHelper.
-     *
-     * @param CoreParametersHelper $coreParametersHelper
      */
     private function setConfigProps(CoreParametersHelper $coreParametersHelper)
     {
-        $this->webhookLimit     = (int) $coreParametersHelper->getParameter('webhook_limit', 10);
-        $this->disableLimit     = (int) $coreParametersHelper->getParameter('webhook_disable_limit', 100);
-        $this->webhookTimeout   = (int) $coreParametersHelper->getParameter('webhook_timeout', 15);
-        $this->logMax           = (int) $coreParametersHelper->getParameter('webhook_log_max', 1000);
-        $this->queueMode        = $coreParametersHelper->getParameter('queue_mode');
-        $this->eventsOrderByDir = $coreParametersHelper->getParameter('events_orderby_dir', Criteria::ASC);
+        $this->webhookLimit     = (int) $coreParametersHelper->get('webhook_limit', 10);
+        $this->disableLimit     = (int) $coreParametersHelper->get('webhook_disable_limit', 100);
+        $this->webhookTimeout   = (int) $coreParametersHelper->get('webhook_timeout', 15);
+        $this->logMax           = (int) $coreParametersHelper->get('webhook_log_max', 1000);
+        $this->queueMode        = $coreParametersHelper->get('queue_mode');
+        $this->eventsOrderByDir = $coreParametersHelper->get('events_orderby_dir', Criteria::ASC);
     }
 }

@@ -16,6 +16,7 @@ use Mautic\CategoryBundle\Form\Type\CategoryListType;
 use Mautic\CoreBundle\Form\EventListener\CleanFormSubscriber;
 use Mautic\CoreBundle\Form\Type\FormButtonsType;
 use Mautic\CoreBundle\Form\Type\YesNoButtonGroupType;
+use Mautic\CoreBundle\Helper\EncryptionHelper;
 use Mautic\WebhookBundle\Entity\Webhook;
 use Mautic\WebhookBundle\Form\DataTransformer\EventsToArrayTransformer;
 use Symfony\Component\Form\AbstractType;
@@ -29,12 +30,12 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class WebhookType extends AbstractType
 {
-    /**
-     * {@inheritdoc}
-     */
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
         $builder->addEventSubscriber(new CleanFormSubscriber(['description' => 'strict_html']));
+
+        /** @var Webhook $webhook */
+        $webhook = $builder->getData();
 
         $builder->add(
             'name',
@@ -70,6 +71,21 @@ class WebhookType extends AbstractType
             ]
         );
 
+        $builder->add(
+            'secret',
+            TextType::class,
+            [
+                'label'      => 'mautic.webhook.form.secret',
+                'label_attr' => ['class' => 'control-label'],
+                'attr'       => [
+                    'class'   => 'form-control',
+                    'tooltip' => 'mautic.webhook.secret.tooltip',
+                ],
+                'data'     => $webhook->getSecret() ?? EncryptionHelper::generateKey(),
+                'required' => false,
+            ]
+        );
+
         $events = $options['events'];
 
         $choices = [];
@@ -81,14 +97,13 @@ class WebhookType extends AbstractType
             'events',
             ChoiceType::class,
             [
-                'choices'           => $choices,
-                'multiple'          => true,
-                'expanded'          => true,
-                'label'             => 'mautic.webhook.form.webhook.events',
-                'label_attr'        => ['class' => 'control-label'],
-                'attr'              => ['class' => ''],
-                'choices_as_values' => true,
-            ]
+                'choices'    => $choices,
+                'multiple'   => true,
+                'expanded'   => true,
+                'label'      => 'mautic.webhook.form.webhook.events',
+                'label_attr' => ['class' => 'control-label'],
+                'attr'       => ['class' => ''],
+                ]
         );
 
         $builder->get('events')->addModelTransformer(new EventsToArrayTransformer($options['data']));
@@ -104,7 +119,6 @@ class WebhookType extends AbstractType
             ]
         );
 
-        //add category
         $builder->add(
             'category',
             CategoryListType::class,
@@ -115,26 +129,26 @@ class WebhookType extends AbstractType
 
         $builder->add('isPublished', YesNoButtonGroupType::class);
 
-        $builder->add('eventsOrderbyDir', ChoiceType::class, [
-            'choices' => [
-                'mautic.core.form.default'                                  => '',
-                'mautic.webhook.config.event.orderby.chronological'         => Criteria::ASC,
-                'mautic.webhook.config.event.orderby.reverse.chronological' => Criteria::DESC,
-            ],
-            'label' => 'mautic.webhook.config.event.orderby',
-            'attr'  => [
-                'class'   => 'form-control',
-                'tooltip' => 'mautic.webhook.config.event.orderby.tooltip',
-            ],
-            'empty_value'       => '',
-            'required'          => false,
-            'choices_as_values' => true,
-        ]);
+        $builder->add(
+            'eventsOrderbyDir',
+            ChoiceType::class,
+            [
+                'choices' => [
+                    'mautic.core.form.default'                                  => '',
+                    'mautic.webhook.config.event.orderby.chronological'         => Criteria::ASC,
+                    'mautic.webhook.config.event.orderby.reverse.chronological' => Criteria::DESC,
+                ],
+                'label' => 'mautic.webhook.config.event.orderby',
+                'attr'  => [
+                    'class'   => 'form-control',
+                    'tooltip' => 'mautic.webhook.config.event.orderby.tooltip',
+                ],
+                'placeholder' => '',
+                'required'    => false,
+            ]
+        );
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults(
@@ -146,9 +160,6 @@ class WebhookType extends AbstractType
         $resolver->setDefined(['events']);
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function getBlockPrefix()
     {
         return 'webhook';

@@ -95,12 +95,12 @@ class EventLogApiController extends CommonApiController
             if (null == $campaign || !$campaign->getId()) {
                 return $this->notFound();
             }
-            if (!$this->checkEntityAccess($campaign, 'view')) {
+            if (!$this->checkEntityAccess($campaign)) {
                 return $this->accessDenied();
             }
             // Check that contact is part of the campaign
             $membership = $campaign->getContactMembership($contact);
-            if (count($membership) === 0) {
+            if (0 === count($membership)) {
                 return $this->returnError('mautic.campaign.error.contact_not_in_campaign', Response::HTTP_CONFLICT);
             }
 
@@ -244,9 +244,8 @@ class EventLogApiController extends CommonApiController
     }
 
     /**
-     * @param null  $data
-     * @param null  $statusCode
-     * @param array $headers
+     * @param null $data
+     * @param null $statusCode
      *
      * @return \FOS\RestBundle\View\View
      */

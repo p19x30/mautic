@@ -11,7 +11,6 @@
 
 namespace Mautic\LeadBundle\EventListener;
 
-use Mautic\CoreBundle\EventListener\CommonSubscriber;
 use Mautic\LeadBundle\Event\ChannelSubscriptionChange;
 use Mautic\LeadBundle\Event\LeadEvent;
 use Mautic\LeadBundle\Event\PointsChangeEvent;
@@ -19,20 +18,15 @@ use Mautic\LeadBundle\LeadEvents;
 use Mautic\WebhookBundle\Event\WebhookBuilderEvent;
 use Mautic\WebhookBundle\Model\WebhookModel;
 use Mautic\WebhookBundle\WebhookEvents;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
-/**
- * Class WebhookSubscriber.
- */
-class WebhookSubscriber extends CommonSubscriber
+class WebhookSubscriber implements EventSubscriberInterface
 {
     /**
      * @var WebhookModel
      */
     private $webhookModel;
 
-    /**
-     * @param WebhookModel $webhookModel
-     */
     public function __construct(WebhookModel $webhookModel)
     {
         $this->webhookModel = $webhookModel;
@@ -54,8 +48,6 @@ class WebhookSubscriber extends CommonSubscriber
 
     /**
      * Add event triggers and actions.
-     *
-     * @param WebhookBuilderEvent $event
      */
     public function onWebhookBuild(WebhookBuilderEvent $event)
     {
@@ -105,9 +97,6 @@ class WebhookSubscriber extends CommonSubscriber
         );
     }
 
-    /**
-     * @param LeadEvent $event
-     */
     public function onLeadNewUpdate(LeadEvent $event)
     {
         $lead = $event->getLead();
@@ -133,9 +122,6 @@ class WebhookSubscriber extends CommonSubscriber
         );
     }
 
-    /**
-     * @param PointsChangeEvent $event
-     */
     public function onLeadPointChange(PointsChangeEvent $event)
     {
         $this->webhookModel->queueWebhooksByType(
@@ -157,9 +143,6 @@ class WebhookSubscriber extends CommonSubscriber
         );
     }
 
-    /**
-     * @param LeadEvent $event
-     */
     public function onLeadDelete(LeadEvent $event)
     {
         $lead = $event->getLead();
@@ -178,9 +161,6 @@ class WebhookSubscriber extends CommonSubscriber
         );
     }
 
-    /**
-     * @param ChannelSubscriptionChange $event
-     */
     public function onChannelSubscriptionChange(ChannelSubscriptionChange $event)
     {
         $this->webhookModel->queueWebhooksByType(

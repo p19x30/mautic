@@ -50,12 +50,6 @@ final class MomentumFacade implements MomentumFacadeInterface
 
     /**
      * MomentumFacade constructor.
-     *
-     * @param AdapterInterface               $adapter
-     * @param SwiftMessageServiceInterface   $swiftMessageService
-     * @param SwiftMessageValidatorInterface $swiftMessageValidator
-     * @param MomentumCallbackInterface      $momentumCallback
-     * @param Logger                         $logger
      */
     public function __construct(
         AdapterInterface $adapter,
@@ -72,8 +66,6 @@ final class MomentumFacade implements MomentumFacadeInterface
     }
 
     /**
-     * @param \Swift_Mime_SimpleMessage $message
-     *
      * @return mixed
      *
      * @throws \Swift_TransportException
@@ -88,7 +80,7 @@ final class MomentumFacade implements MomentumFacadeInterface
                 if (0 !== $attempt) {
                     sleep(5);
                 }
-                $attempt += 1;
+                ++$attempt;
                 $response = $this->adapter->createTransmission($transmission);
                 $response = $response->wait();
             } while (500 === (int) $response->getStatusCode() && 3 > $attempt);

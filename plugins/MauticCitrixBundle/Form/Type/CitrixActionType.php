@@ -11,6 +11,7 @@
 
 namespace MauticPlugin\MauticCitrixBundle\Form\Type;
 
+use Mautic\EmailBundle\Form\Type\EmailListType;
 use Mautic\FormBundle\Model\FieldModel;
 use MauticPlugin\MauticCitrixBundle\Helper\CitrixHelper;
 use MauticPlugin\MauticCitrixBundle\Helper\CitrixProducts;
@@ -31,8 +32,6 @@ class CitrixActionType extends AbstractType
 
     /**
      * CitrixActionType constructor.
-     *
-     * @param FieldModel $fieldModel
      */
     public function __construct(FieldModel $fieldModel)
     {
@@ -96,7 +95,6 @@ class CitrixActionType extends AbstractType
                 ChoiceType::class,
                 [
                     'choices'           => array_flip($products),
-                    'choices_as_values' => true,
                     'expanded'          => false,
                     'label_attr'        => ['class' => 'control-label'],
                     'multiple'          => false,
@@ -124,7 +122,6 @@ class CitrixActionType extends AbstractType
                 ChoiceType::class,
                 [
                     'choices'           => $choices,
-                    'choices_as_values' => true,
                     'expanded'          => false,
                     'label_attr'        => ['class' => 'control-label'],
                     'multiple'          => false,
@@ -147,7 +144,6 @@ class CitrixActionType extends AbstractType
                 ChoiceType::class,
                 [
                     'choices'           => $choices,
-                    'choices_as_values' => true,
                     'expanded'          => false,
                     'label_attr'        => ['class' => 'control-label'],
                     'multiple'          => false,
@@ -171,7 +167,6 @@ class CitrixActionType extends AbstractType
             ChoiceType::class,
             [
                 'choices'           => $choices,
-                'choices_as_values' => true,
                 'expanded'          => false,
                 'label_attr'        => ['class' => 'control-label'],
                 'multiple'          => false,
@@ -213,7 +208,7 @@ class CitrixActionType extends AbstractType
                 $defaultOptions = array_merge($defaultOptions, $options['list_options']);
             }
 
-            $builder->add('template', 'email_list', $defaultOptions);
+            $builder->add('template', EmailListType::class, $defaultOptions);
         }
     }
 

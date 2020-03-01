@@ -23,11 +23,9 @@ use Symfony\Component\HttpKernel\Event\FilterControllerEvent;
  */
 class CompanyApiController extends CommonApiController
 {
-    use CustomFieldsApiControllerTrait, LeadAccessTrait;
+    use CustomFieldsApiControllerTrait;
+    use LeadAccessTrait;
 
-    /**
-     * @param FilterControllerEvent $event
-     */
     public function initialize(FilterControllerEvent $event)
     {
         $this->model              = $this->getModel('lead.company');
@@ -88,7 +86,7 @@ class CompanyApiController extends CommonApiController
         $company = $this->model->getEntity($companyId);
         $view    = $this->view(['success' => 1], Response::HTTP_OK);
 
-        if ($company === null) {
+        if (null === $company) {
             return $this->notFound();
         }
 
@@ -117,7 +115,7 @@ class CompanyApiController extends CommonApiController
         $company = $this->model->getEntity($companyId);
         $view    = $this->view(['success' => 1], Response::HTTP_OK);
 
-        if ($company === null) {
+        if (null === $company) {
             return $this->notFound();
         }
 
@@ -125,7 +123,7 @@ class CompanyApiController extends CommonApiController
         $contact      = $contactModel->getEntity($contactId);
 
         // Does the contact exist and the user has permission to edit
-        if ($contact === null) {
+        if (null === $contact) {
             return $this->notFound();
         } elseif (!$this->security->hasEntityAccess('lead:leads:editown', 'lead:leads:editother', $contact->getPermissionUser())) {
             return $this->accessDenied();

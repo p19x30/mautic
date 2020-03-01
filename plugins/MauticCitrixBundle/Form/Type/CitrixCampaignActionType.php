@@ -11,6 +11,7 @@
 
 namespace MauticPlugin\MauticCitrixBundle\Form\Type;
 
+use Mautic\EmailBundle\Form\Type\EmailListType;
 use MauticPlugin\MauticCitrixBundle\Helper\CitrixHelper;
 use MauticPlugin\MauticCitrixBundle\Helper\CitrixProducts;
 use Symfony\Component\Form\AbstractType;
@@ -30,8 +31,6 @@ class CitrixCampaignActionType extends AbstractType
 
     /**
      * CitrixCampaignActionType constructor.
-     *
-     * @param TranslatorInterface $translator
      */
     public function __construct(TranslatorInterface $translator)
     {
@@ -66,8 +65,8 @@ class CitrixCampaignActionType extends AbstractType
 
         $newChoices = [];
         foreach ($choices as $k => $c) {
-            if (0 === strpos($k, $product)) {
-                $newChoices[$c] = $k;
+            if (0 === mb_strpos($k, $product)) {
+                $newChoices[$k] = $c;
             }
         }
 
@@ -75,9 +74,8 @@ class CitrixCampaignActionType extends AbstractType
             'event-criteria-'.$product,
             ChoiceType::class,
             [
-                'label'             => $this->translator->trans('plugin.citrix.action.criteria'),
-                'choices'           => $newChoices,
-                'choices_as_values' => true,
+                'label'   => $this->translator->trans('plugin.citrix.action.criteria'),
+                'choices' => $newChoices,
             ]
         );
 
@@ -86,10 +84,9 @@ class CitrixCampaignActionType extends AbstractType
                 $product.'-list',
                 ChoiceType::class,
                 [
-                    'label'             => $this->translator->trans('plugin.citrix.decision.'.$product.'.list'),
-                    'choices'           => array_flip(CitrixHelper::getCitrixChoices($product)),
-                    'choices_as_values' => true,
-                    'multiple'          => true,
+                    'label'    => $this->translator->trans('plugin.citrix.decision.'.$product.'.list'),
+                    'choices'  => array_flip(CitrixHelper::getCitrixChoices($product)),
+                    'multiple' => true,
                 ]
             );
         }
@@ -105,8 +102,8 @@ class CitrixCampaignActionType extends AbstractType
                     'class'   => 'form-control',
                     'tooltip' => 'plugin.citrix.emailtemplate_descr',
                 ],
-                'required' => true,
-                'multiple' => false,
+                'required'   => true,
+                'multiple'   => false,
             ];
 
             if (array_key_exists('list_options', $options)) {
@@ -118,7 +115,7 @@ class CitrixCampaignActionType extends AbstractType
                 $defaultOptions = array_merge($defaultOptions, $options['list_options']);
             }
 
-            $builder->add('template', 'email_list', $defaultOptions);
+            $builder->add('template', EmailListType::class, $defaultOptions);
         }
     }
 

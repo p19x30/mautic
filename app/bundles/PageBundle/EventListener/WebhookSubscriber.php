@@ -11,26 +11,20 @@
 
 namespace Mautic\PageBundle\EventListener;
 
-use Mautic\CoreBundle\EventListener\CommonSubscriber;
 use Mautic\PageBundle\Event\PageHitEvent;
 use Mautic\PageBundle\PageEvents;
 use Mautic\WebhookBundle\Event\WebhookBuilderEvent;
 use Mautic\WebhookBundle\Model\WebhookModel;
 use Mautic\WebhookBundle\WebhookEvents;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
-/**
- * Class WebhookSubscriber.
- */
-class WebhookSubscriber extends CommonSubscriber
+class WebhookSubscriber implements EventSubscriberInterface
 {
     /**
      * @var WebhookModel
      */
     private $webhookModel;
 
-    /**
-     * @param WebhookModel $webhookModel
-     */
     public function __construct(WebhookModel $webhookModel)
     {
         $this->webhookModel = $webhookModel;
@@ -49,8 +43,6 @@ class WebhookSubscriber extends CommonSubscriber
 
     /**
      * Add event triggers and actions.
-     *
-     * @param WebhookBuilderEvent $event
      */
     public function onWebhookBuild(WebhookBuilderEvent $event)
     {
@@ -64,9 +56,6 @@ class WebhookSubscriber extends CommonSubscriber
         $event->addEvent(PageEvents::PAGE_ON_HIT, $pageHit);
     }
 
-    /**
-     * @param PageHitEvent $event
-     */
     public function onPageHit(PageHitEvent $event)
     {
         $this->webhookModel->queueWebhooksByType(

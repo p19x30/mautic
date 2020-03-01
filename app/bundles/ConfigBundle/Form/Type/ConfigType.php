@@ -26,9 +26,6 @@ class ConfigType extends AbstractType
      */
     private $restrictionHelper;
 
-    /**
-     * @param RestrictionHelper $restrictionHelper
-     */
     public function __construct(RestrictionHelper $restrictionHelper)
     {
         $this->restrictionHelper = $restrictionHelper;
@@ -61,7 +58,7 @@ class ConfigType extends AbstractType
             function (FormEvent $event) {
                 $form = $event->getForm();
 
-                foreach ($form as $config => $configForm) {
+                foreach ($form as $configForm) {
                     foreach ($configForm as $child) {
                         $this->restrictionHelper->applyRestrictions($child, $configForm);
                     }
@@ -91,9 +88,6 @@ class ConfigType extends AbstractType
         return 'config';
     }
 
-    /**
-     * @param OptionsResolver $resolver
-     */
     public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults(
